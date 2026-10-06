@@ -1,0 +1,2 @@
+@model List<Order>
+<h1>My orders</h1><div class="table-wrap"><table><tr><th>Order</th><th>Date</th><th>Status</th><th>Payment</th><th>Total</th></tr>@foreach(var o in Model){<tr><td><a href="/orders/@o.Id">@o.Number</a></td><td>@o.CreatedAt.ToString("yyyy-MM-dd")</td><td><span class="status">@o.Status</span></td><td>@o.PaymentStatus</td><td>BDT  @o.Total.ToString("N2")</td></tr>}</table></div>

@@ -1,0 +1,10 @@
+using Ecommerce.Domain;
+using Ecommerce.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+namespace Ecommerce.Web.Controllers;
+[Route("admin/expense-files")]
+public class ExpenseFilesController(AppDb db,IWebHostEnvironment env,LedgerService ledger):Controller{
+ [HttpGet("{id:guid}"),Permit("accounts.view")]public async Task<IActionResult> Get(Guid id){var e=await db.Set<Expense>().FindAsync(id);if(e==null||string.IsNullOrEmpty(e.AttachmentPath))return NotFound();var name=Path.GetFileName(e.AttachmentPath);var path=Path.Combine(env.ContentRootPath,"App_Data","receipts",name);if(!System.IO.File.Exists(path))return NotFound();return PhysicalFile(path,"application/octet-stream",name);}
+ [HttpPost("upload"),Permit("accounts.edit"),RequestSizeLimit(6*1024*1024)]public async Task<IActionResult> Upload(Guid id,IFormFile file){var e=await db.Set<Expense>().FindAsync(id);if(e==null)return NotFound();if(e.Status!="Draft"||file==null||file.Length<8||file.Length>5*1024*1024)return BadRequest("Only draft expenses accept a receipt up to 5 MB.");using var ms=new MemoryStream();await file.CopyToAsync(ms);var b=ms.ToArray();var ext=Path.GetExtension(file.FileName).ToLowerInvariant();var valid=ext switch{".pdf"=>file.ContentType=="application/pdf"&&System.Text.Encoding.ASCII.GetString(b,0,5)=="%PDF-",".png"=>file.ContentType=="image/png"&&b.AsSpan(0,8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),".jpg" or ".jpeg"=>file.ContentType=="image/jpeg"&&b[0]==255&&b[1]==216&&b[2]==255,_=>false};if(!valid)return BadRequest("Invalid receipt type/signature.");var folder=Path.Combine(env.ContentRootPath,"App_Data","receipts");Directory.CreateDirectory(folder);var name=Guid.NewGuid().ToString("N")+ext;var path=Path.Combine(folder,name);await System.IO.File.WriteAllBytesAsync(path,b);try{e.AttachmentPath=name;ledger.Audit(db.CurrentActor,"ExpenseReceipt",e);await db.SaveChangesAsync();}catch{System.IO.File.Delete(path);throw;}return Redirect("/admin/operations/accounts");}
+}

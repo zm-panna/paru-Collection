@@ -1,0 +1,3 @@
+@model Product
+@{Layout="_AdminLayout";}
+<h1 class="no-print">Barcode labels · @Model.Name</h1><button class="no-print" onclick="window.print()">Print labels</button><p class="no-print">CODE 128 · print at 100% scale; select your label paper in the printer dialog.</p><div class="label-sheet">@foreach(var s in Model.Skus.Where(x=>x.Active)){<section style="width:70mm;padding:4mm;break-inside:avoid;border:1px dashed #ccc"><strong>@Model.Name · @s.Name</strong><img style="display:block;width:100%;height:15mm" src="/admin/files/barcode/@s.Id" alt="@s.Barcode"/><div>@(string.IsNullOrWhiteSpace(s.Barcode)?s.SKU:s.Barcode)</div><b>BDT @s.SalePrice.ToString("N2")</b></section>}</div>

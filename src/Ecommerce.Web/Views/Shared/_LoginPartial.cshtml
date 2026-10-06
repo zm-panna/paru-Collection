@@ -1,0 +1,1 @@
+@if(User.Identity?.IsAuthenticated==true){<a href="/account/profile">My account</a><form method="post" action="/account/logout">@Html.AntiForgeryToken()<button class="link-button">Sign out</button></form>}else{<a href="/account/login">Sign in</a>}

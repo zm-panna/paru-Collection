@@ -1,0 +1,20 @@
+@model Dictionary<string,string>
+@{ Layout="_AdminLayout"; ViewData["Title"]="Company settings"; }
+<p><a href="/admin/ai-health">Check local Ollama connection and installed model</a></p>
+<h1>Company / Ecommerce settings</h1>
+<p>Changes apply to this deployment. Use a separate database for each independent business.</p>
+<div asp-validation-summary="All" class="text-danger"></div>
+<form method="post" action="/admin/company-settings" enctype="multipart/form-data">
+@Html.AntiForgeryToken()
+@foreach(var entry in Model) {
+ <div class="mb-3"><label for="@entry.Key">@entry.Key</label>
+ <input class="form-control" id="@entry.Key" name="@entry.Key" value="@entry.Value" maxlength="1000" />
+ @if(new[]{"LogoUrl","FaviconUrl","BannerUrl","BackgroundImageUrl"}.Contains(entry.Key)) {
+ <input class="form-control" type="file" name="@(entry.Key+"File")" accept="image/png,image/jpeg,image/webp" />
+ @if(!string.IsNullOrEmpty(entry.Value)){<img src="@Ecommerce.Infrastructure.BrandingService.SafeUrl(entry.Value)" alt="@entry.Key" style="max-height:90px;max-width:240px"/>}
+ }
+ </div>
+}
+<button class="btn btn-primary" type="submit">Save settings</button>
+</form>
+<p>WhatsApp: country code and number. Messenger: https://m.me/your-page-name. Empty contact settings hide their buttons.</p>

@@ -1,0 +1,25 @@
+using System.Security.Claims;
+using Ecommerce.Domain;
+using Ecommerce.Application;
+using Ecommerce.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+namespace Ecommerce.Web.Controllers;
+[Route("admin/files"),Permit("catalog.edit")]
+public class FilesController(AppDb db,IWebHostEnvironment env,LedgerService ledger):Controller {
+ [HttpGet("{productId:guid}")]public async Task<IActionResult> Index(Guid productId){var p=await db.Set<Product>().Include(x=>x.Files).SingleOrDefaultAsync(x=>x.Id==productId);return p==null?NotFound():View(p);}
+ [HttpPost("upload"),RequestSizeLimit(6*1024*1024)]public async Task<IActionResult> Upload(Guid productId,IFormFile file,bool primary=false){
+  if(!await db.Set<Product>().AnyAsync(x=>x.Id==productId))return NotFound();if(file==null||file.Length==0||file.Length>5*1024*1024)throw new BusinessException("Select a file up to 5 MB.");
+  var ext=Path.GetExtension(file.FileName).ToLowerInvariant();using var mem=new MemoryStream();await file.CopyToAsync(mem);var bytes=mem.ToArray();
+  bool valid=ext switch {".png"=>file.ContentType=="image/png"&&bytes.Length>8&&bytes.AsSpan(0,8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),".jpg" or ".jpeg"=>file.ContentType=="image/jpeg"&&bytes.Length>3&&bytes[0]==255&&bytes[1]==216&&bytes[2]==255,".webp"=>file.ContentType=="image/webp"&&bytes.Length>12&&System.Text.Encoding.ASCII.GetString(bytes,0,4)=="RIFF"&&System.Text.Encoding.ASCII.GetString(bytes,8,4)=="WEBP",_=>false};
+  if(!valid)throw new BusinessException("Only signature-checked PNG, JPEG and WebP images are accepted.");
+  var name=Guid.NewGuid().ToString("N")+ext;var relativeFolder=Path.Combine("Docs","Inv",productId.ToString("N"));var folder=Path.Combine(env.WebRootPath,relativeFolder);Directory.CreateDirectory(folder);var path=Path.Combine(folder,name);var thumbnail=await ProductMedia.ThumbnailAsync(bytes,file.ContentType);var thumbName=Guid.NewGuid().ToString("N")+".png";var thumbPath=Path.Combine(folder,thumbName);await System.IO.File.WriteAllBytesAsync(path,bytes);await System.IO.File.WriteAllBytesAsync(thumbPath,thumbnail);
+  try{if(primary)foreach(var old in await db.Set<ProductFile>().Where(x=>x.ProductId==productId).ToListAsync())old.IsPrimary=false;var f=new ProductFile{ProductId=productId,FileName=name,FilePath="/Docs/Inv/"+productId.ToString("N")+"/"+name,FileType=file.ContentType,ThumbnailPath="/Docs/Inv/"+productId.ToString("N")+"/"+thumbName,IsPrimary=primary};db.Add(f);ledger.Audit(User.FindFirstValue(ClaimTypes.NameIdentifier)!,"ImageUpload",f);await db.SaveChangesAsync();}catch{System.IO.File.Delete(path);System.IO.File.Delete(thumbPath);throw;}
+  return RedirectToAction(nameof(Index),new{productId});
+ }
+ [HttpPost("sort")]public async Task<IActionResult> Sort(Guid id,int sortOrder,bool primary){var file=await db.Set<ProductFile>().SingleAsync(x=>x.Id==id);if(primary&&file.FileType=="application/pdf")return BadRequest("A PDF cannot be the primary image.");if(primary)foreach(var old in await db.Set<ProductFile>().Where(x=>x.ProductId==file.ProductId).ToListAsync())old.IsPrimary=false;file.IsPrimary=primary;file.SortOrder=sortOrder;ledger.Audit(User.FindFirstValue(ClaimTypes.NameIdentifier)!,"ProductMediaSorted",file);await db.SaveChangesAsync();return RedirectToAction(nameof(Index),new{productId=file.ProductId});}
+ [HttpGet("barcode/{skuId:guid}")]public async Task<IActionResult> Barcode(Guid skuId){var sku=await db.Set<ProductSku>().FindAsync(skuId);if(sku==null)return NotFound();return Content(ProductMedia.Barcode(string.IsNullOrWhiteSpace(sku.Barcode)?sku.SKU:sku.Barcode),"image/svg+xml");}
+ [HttpGet("labels/{productId:guid}")]public async Task<IActionResult> Labels(Guid productId){var product=await db.Set<Product>().Include(x=>x.Skus).SingleOrDefaultAsync(x=>x.Id==productId);return product==null?NotFound():View(product);}
+ [HttpPost("document"),RequestSizeLimit(11*1024*1024)]public async Task<IActionResult> Document(Guid productId,IFormFile file){if(!await db.Set<Product>().AnyAsync(x=>x.Id==productId))return NotFound();if(file==null||file.Length<5||file.Length>10*1024*1024||Path.GetExtension(file.FileName).ToLowerInvariant()!=".pdf"||file.ContentType!="application/pdf")return BadRequest("Upload a PDF up to 10 MB.");using var mem=new MemoryStream();await file.CopyToAsync(mem);var bytes=mem.ToArray();if(System.Text.Encoding.ASCII.GetString(bytes,0,5)!="%PDF-")return BadRequest("Invalid PDF signature.");var f=new ProductFile{ProductId=productId,FileName=Guid.NewGuid().ToString("N")+".pdf",FileType="application/pdf"};f.FilePath="/documents/"+f.Id;var dir=Path.Combine(env.ContentRootPath,"App_Data","documents");Directory.CreateDirectory(dir);var path=Path.Combine(dir,f.FileName);await System.IO.File.WriteAllBytesAsync(path,bytes);try{db.Add(f);ledger.Audit(User.FindFirstValue(ClaimTypes.NameIdentifier)!,"DocumentUpload",f);await db.SaveChangesAsync();}catch{System.IO.File.Delete(path);throw;}return RedirectToAction(nameof(Index),new{productId});}
+
+}

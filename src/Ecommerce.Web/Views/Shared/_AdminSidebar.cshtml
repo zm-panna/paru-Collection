@@ -1,0 +1,107 @@
+@* Views/Shared/_AdminSidebar.cshtml
+   Dynamic database-driven admin navigation.
+   Admin/SuperAdmin full visibility is handled by AccessService.
+*@
+@using System.Security.Claims
+@inject Ecommerce.Infrastructure.AccessService Access
+
+@{
+    var menuItems = await Access.MenuAsync(User);
+
+    var groups = menuItems
+        .Where(x => x.Menu == null || x.Menu.Active)
+        .GroupBy(x => x.Menu?.Name ?? "Business Workspace")
+        .OrderBy(g => g.Min(x => x.Menu?.SortOrder ?? int.MaxValue))
+        .ThenBy(g => g.Key)
+        .ToList();
+
+    var isFullAdmin =
+        User.IsInRole("Admin") ||
+        User.IsInRole("SuperAdmin");
+
+    var currentPath = Context.Request.Path;
+}
+
+<aside class="sidebar">
+
+    @if (groups.Count == 0)
+    {
+        <div class="sidebar-empty">
+            <i class="bi bi-exclamation-circle"></i>
+
+            @if (isFullAdmin)
+            {
+                <span>No database menu found. Check Menu/MenuItem seed.</span>
+            }
+            else
+            {
+                <span>No menu is assigned to your role.</span>
+            }
+        </div>
+    }
+    else
+    {
+        @foreach (var group in groups)
+        {
+            <small class="sidebar-heading">
+                @group.Key.ToUpperInvariant()
+            </small>
+
+            @foreach (var item in group
+                .OrderBy(x => x.SortOrder)
+                .ThenBy(x => x.Label))
+            {
+                var url = string.IsNullOrWhiteSpace(item.Url)
+                    ? "#"
+                    : item.Url.Trim();
+
+                var selected = false;
+
+                if (url != "#" && url.StartsWith("/"))
+                {
+                    selected = currentPath.StartsWithSegments(url);
+                }
+
+                <a class="sidebar-link @(selected ? "selected" : "")"
+                   href="@url"
+                   title="@item.Label">
+
+                    @if (!string.IsNullOrWhiteSpace(item.Icon))
+                    {
+                        <i class="@item.Icon"></i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-circle"></i>
+                    }
+
+                    <span>@item.Label</span>
+                </a>
+            }
+        }
+    }
+
+    <small class="sidebar-heading">
+        ACCOUNT
+    </small>
+
+    <a class="sidebar-link @(currentPath.StartsWithSegments("/account/profile") ? "selected" : "")"
+       href="/account/profile">
+        <i class="bi bi-person-circle"></i>
+        <span>Profile &amp; Security</span>
+    </a>
+
+    <form method="post"
+          action="/account/logout"
+          class="sidebar-logout">
+
+        @Html.AntiForgeryToken()
+
+        <button type="submit"
+                class="sidebar-link sidebar-logout-button">
+            <i class="bi bi-box-arrow-right"></i>
+            <span>Sign Out</span>
+        </button>
+    </form>
+
+</aside>

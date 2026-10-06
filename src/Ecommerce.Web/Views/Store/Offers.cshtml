@@ -1,0 +1,2 @@
+@model List<Campaign>
+<h1>Current offers</h1><p>Campaign prices are calculated at checkout. If multiple campaigns match, the best available discount applies per item before any coupon, subject to basket minimum, cap and redemption limits.</p>@foreach(var c in Model){<div class="panel"><h2>@c.Name · @c.Percent% off</h2><p>Valid until @c.EndsAt.ToString("u")</p><p>Minimum basket: @c.MinimumPurchase · Maximum discount per order: @c.MaximumDiscount · Total redemptions: @c.UsageLimit · Per customer: @c.PerCustomerLimit</p><a href="/products">Browse eligible products</a></div>}

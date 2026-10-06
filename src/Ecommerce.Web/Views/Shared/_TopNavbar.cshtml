@@ -1,0 +1,3 @@
+@inject Ecommerce.Infrastructure.BrandingService Branding
+@{ var brand = await Branding.GetAsync(); }
+<header class="admin-top"><a class="brand" href="/admin">@if(!string.IsNullOrWhiteSpace(brand.LogoUrl)){<img src="@brand.LogoUrl" alt="@brand.CompanyName" class="brand-logo"/>}<span>@brand.CompanyName <small>ERP WORKSPACE</small></span></a><nav>@if(User.IsInRole("ADMIN")||User.IsInRole("Admin")||User.IsInRole("SuperAdmin")){<a href="/admin/company-settings">Company settings</a>}<a href="/">Open storefront ↗</a><a href="/account/profile">@User.Identity?.Name</a></nav></header>

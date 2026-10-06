@@ -1,0 +1,663 @@
+@model CatalogVm
+@inject Ecommerce.Infrastructure.BrandingService Branding
+@{var storefrontBrand=await Branding.GetAsync();}
+@{ViewData["Title"]??="Shop everyday essentials";}
+
+@{
+    ViewData["Title"] ??= storefrontBrand.CompanyName;
+
+    string PageLink(int page)
+    {
+        var values = Context.Request.Query
+            .ToDictionary(
+                x => x.Key,
+                x => (string?)x.Value.ToString());
+
+        values["page"] = page.ToString();
+
+        return Microsoft.AspNetCore.WebUtilities
+            .QueryHelpers
+            .AddQueryString("/products", values);
+    }
+}
+
+
+@* ============================================================
+   HERO
+   ============================================================ *@
+
+<section class="hero">
+
+    <div class="hero-content">
+
+        <span class="eyebrow">
+            THE EVERYDAY COLLECTION
+        </span>
+
+        <h1>
+            Little things.<br />
+            Better living.
+        </h1>
+
+        <p>
+            Discover considered essentials for your wardrobe,
+            home and everyday moments.
+        </p>
+
+        <a class="button"
+           href="#collection">
+            Explore the collection ↗
+        </a>
+
+    </div>
+
+    <div class="hero-art">
+
+        <img src="/images/sample-0.svg"
+             alt="@storefrontBrand.CompanyName product illustration" />
+
+        <span>
+            Made for your everyday
+        </span>
+
+    </div>
+
+</section>
+
+
+@* ============================================================
+   PROMOTIONAL BANNERS
+   ============================================================ *@
+
+@if (ViewBag.Banners is IEnumerable<Banner> banners &&
+     banners.Any())
+{
+    <section class="banner-slider">
+
+        @foreach (var banner in banners)
+        {
+            var bannerImage =
+                string.IsNullOrWhiteSpace(banner.ImagePath)
+                    ? "/images/fallback.svg"
+                    : banner.ImagePath;
+
+            <a href="@(string.IsNullOrWhiteSpace(banner.Link)
+                        ? "#"
+                        : banner.Link)"
+               class="banner-item">
+
+                <img src="@bannerImage"
+                     alt="@banner.Name"
+                     onerror="this.onerror=null;this.src='/images/fallback.svg';" />
+
+                <div class="banner-content">
+
+                    <h2>@banner.Name</h2>
+
+                    @if (!string.IsNullOrWhiteSpace(banner.Subtitle))
+                    {
+                        <p>@banner.Subtitle</p>
+                    }
+
+                </div>
+
+            </a>
+        }
+
+    </section>
+}
+
+
+@* ============================================================
+   SHOP BY CATEGORY
+   ============================================================ *@
+
+<section class="store-section">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                FIND YOUR FAVOURITES
+            </span>
+
+            <h2>
+                Shop by category
+            </h2>
+
+        </div>
+
+        <a href="/products">
+            View all products →
+        </a>
+
+    </div>
+
+
+    <div class="categories">
+
+        @foreach (var c in Model.Categories)
+        {
+            var categoryImage =
+                string.IsNullOrWhiteSpace(c.ImagePath)
+                    ? "/images/fallback.svg"
+                    : c.ImagePath.Replace("\\", "/");
+
+            if (!categoryImage.StartsWith("/"))
+            {
+                categoryImage = "/" + categoryImage;
+            }
+
+            <a class="@(Model.Category == c.Id ? "selected" : "")"
+               href="/products?category=@c.Id">
+
+                <img src="@categoryImage"
+                     alt="@c.Name"
+                     loading="lazy"
+                     onerror="this.onerror=null;this.src='/images/fallback.svg';" />
+
+                <span>
+                    @c.Name
+                </span>
+
+            </a>
+        }
+
+    </div>
+
+</section>
+
+
+@* ============================================================
+   MAIN COLLECTION + FILTER
+   ============================================================ *@
+
+<section class="store-section"
+         id="collection">
+
+    <div class="section-head collection-toolbar">
+
+        <div>
+
+            <span class="eyebrow">
+                CURATED FOR YOU
+            </span>
+
+            <h2>
+                @(string.IsNullOrWhiteSpace(Model.Search)
+                    ? "The collection"
+                    : "Search: " + Model.Search)
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    <form method="get"
+      action="/products"
+      class="catalog-filter compact-filter">
+
+    <input type="hidden"
+           name="q"
+           value="@Model.Search" />
+
+    @if (Model.Category.HasValue)
+    {
+        <input type="hidden"
+               name="category"
+               value="@Model.Category" />
+    }
+
+    <div class="filter-field filter-sort">
+        <label>Sort by</label>
+
+        <select name="sort"
+                data-current="@Context.Request.Query["sort"]">
+            <option value="new">Newest first</option>
+            <option value="price">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="name">Name</option>
+            <option value="popular">Best selling</option>
+            <option value="rating">Highest rating</option>
+        </select>
+    </div>
+
+
+    <div class="filter-field">
+        <label>Brand</label>
+
+        <select name="brand"
+                data-current="@Context.Request.Query["brand"]">
+
+            <option value="">All brands</option>
+
+            @if (ViewBag.Brands is IEnumerable<Brand> brands)
+            {
+                foreach (var b in brands)
+                {
+                    <option value="@b.Id">
+                        @b.Name
+                    </option>
+                }
+            }
+
+        </select>
+    </div>
+
+
+    <div class="filter-field">
+        <label>Rating</label>
+
+        <select name="rating"
+                data-current="@Context.Request.Query["rating"]">
+            <option value="">All ratings</option>
+            <option value="4">4+ stars</option>
+            <option value="3">3+ stars</option>
+        </select>
+    </div>
+
+
+    <div class="filter-field price-field">
+        <label>Min price</label>
+
+        <input name="min"
+               value="@Context.Request.Query["min"]"
+               type="number"
+               min="0"
+               placeholder="৳ Min" />
+    </div>
+
+
+    <div class="filter-field price-field">
+        <label>Max price</label>
+
+        <input name="max"
+               value="@Context.Request.Query["max"]"
+               type="number"
+               min="0"
+               placeholder="৳ Max" />
+    </div>
+
+
+    <div class="filter-field small-field">
+        <label>Color</label>
+
+        <input name="color"
+               value="@Context.Request.Query["color"]"
+               placeholder="Color" />
+    </div>
+
+
+    <div class="filter-field small-field">
+        <label>Size</label>
+
+        <input name="size"
+               value="@Context.Request.Query["size"]"
+               placeholder="Size" />
+    </div>
+
+
+    <div class="filter-options">
+
+        <label class="filter-check">
+            <input type="checkbox"
+                   name="discounted"
+                   value="true"
+                   checked="@(Context.Request.Query["discounted"] == "true")" />
+
+            <span>On offer</span>
+        </label>
+
+        <label class="filter-check">
+            <input type="checkbox"
+                   name="available"
+                   value="true"
+                   checked="@(Context.Request.Query["available"] == "true")" />
+
+            <span>In stock</span>
+        </label>
+
+    </div>
+
+
+    <div class="filter-actions">
+
+        <button type="submit"
+                class="filter-button">
+            Filter
+        </button>
+
+        <a href="/products"
+           class="filter-clear">
+            Clear
+        </a>
+
+    </div>
+
+</form>
+
+
+    @* ========================================================
+       MAIN PRODUCTS
+       ======================================================== *@
+
+    @if (Model.Products.Count > 0)
+    {
+        <div class="product-grid main-product-grid">
+
+            @foreach (var product in Model.Products)
+            {
+                <partial name="_ProductCard"
+                         model="product" />
+            }
+
+        </div>
+    }
+    else
+    {
+        <div class="empty">
+
+            <h3>
+                No products found
+            </h3>
+
+            <p>
+                Try another category, filter or search.
+            </p>
+
+            <a href="/products"
+               class="button">
+                Browse all products
+            </a>
+
+        </div>
+    }
+
+
+    @* ========================================================
+       PAGINATION
+       ======================================================== *@
+
+    @if (Model.Page > 1 || Model.More)
+    {
+        <nav class="pagination"
+             aria-label="Product pages">
+
+            @if (Model.Page > 1)
+            {
+                <a href="@PageLink(Model.Page - 1)">
+                    ← Previous
+                </a>
+            }
+
+            <span>
+                Page @Model.Page
+            </span>
+
+            @if (Model.More)
+            {
+                <a href="@PageLink(Model.Page + 1)">
+                    Next →
+                </a>
+            }
+
+        </nav>
+    }
+
+</section>
+
+
+@* ============================================================
+   STORE PROMISES
+   ============================================================ *@
+
+<section class="promise">
+
+    <div>
+
+        <strong>
+            Thoughtful selection
+        </strong>
+
+        <p>
+            Essentials for every part of your day.
+        </p>
+
+    </div>
+
+
+    <div>
+
+        <strong>
+            Simple shopping
+        </strong>
+
+        <p>
+            Track your orders from your account.
+        </p>
+
+    </div>
+
+
+    <div>
+
+        <strong>
+            Here to help
+        </strong>
+
+        <p>
+            Ask our AI assistant or contact support.
+        </p>
+
+    </div>
+
+</section>
+
+
+@* ============================================================
+   EXPLORE
+   ============================================================ *@
+
+<section class="panel explore-panel">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                DISCOVER MORE
+            </span>
+
+            <h2>
+                Explore
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    <nav class="tabs">
+
+        <a href="/products?collection=featured">
+            Featured
+        </a>
+
+        <a href="/products?collection=new">
+            New arrivals
+        </a>
+
+        <a href="/products?collection=best">
+            Best sellers
+        </a>
+
+        <a href="/products?discounted=true">
+            Flash offers
+        </a>
+
+    </nav>
+
+
+    @if (ViewBag.Popular is IEnumerable<string> popular &&
+         popular.Any())
+    {
+        <div class="search-links">
+
+            <strong>
+                Popular searches:
+            </strong>
+
+            @foreach (var term in popular)
+            {
+                <a href="/products?q=@Uri.EscapeDataString(term)">
+                    @term
+                </a>
+            }
+
+        </div>
+    }
+
+
+    @if (User.Identity?.IsAuthenticated == true &&
+         ViewBag.History is IEnumerable<string> history &&
+         history.Any())
+    {
+        <div class="search-links">
+
+            <strong>
+                Your recent searches:
+            </strong>
+
+            @foreach (var term in history)
+            {
+                <a href="/products?q=@Uri.EscapeDataString(term)">
+                    @term
+                </a>
+            }
+
+        </div>
+    }
+
+</section>
+
+
+@* ============================================================
+   RECOMMENDED FOR YOU
+   Same Product Card
+   ============================================================ *@
+
+@if (ViewBag.Recommended is IEnumerable<Product> recommended &&
+     recommended.Any())
+{
+    <section class="store-section home-collection">
+
+        <div class="section-head">
+
+            <div>
+
+                <span class="eyebrow">
+                    JUST FOR YOU
+                </span>
+
+                <h2>
+                    Recommended for you
+                </h2>
+
+                <p class="muted">
+                    Based on viewed and purchased categories,
+                    then delivered-product popularity.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="product-grid">
+
+            @foreach (var product in recommended)
+            {
+                <partial name="_ProductCard"
+                         model="product" />
+            }
+
+        </div>
+
+    </section>
+}
+
+
+@* ============================================================
+   FEATURED / NEW ARRIVALS / BEST SELLERS / FLASH OFFERS
+   All use exactly the same Product Card.
+   ============================================================ *@
+
+@if (ViewBag.HomeCollections
+    is Dictionary<string, List<Product>> collections)
+{
+    foreach (var group in collections)
+    {
+        if (group.Value == null ||
+            group.Value.Count == 0)
+        {
+            continue;
+        }
+
+        var collectionUrl = group.Key switch
+        {
+            "Featured" =>
+                "/products?collection=featured",
+
+            "New arrivals" =>
+                "/products?collection=new",
+
+            "Best sellers" =>
+                "/products?collection=best",
+
+            "Flash offers" =>
+                "/products?discounted=true",
+
+            _ =>
+                "/products"
+        };
+
+
+        <section class="store-section home-collection">
+
+            <div class="section-head">
+
+                <div>
+
+                    <span class="eyebrow">
+                        PARU COLLECTION
+                    </span>
+
+                    <h2>
+                        @group.Key
+                    </h2>
+
+                </div>
+
+
+                <a href="@collectionUrl">
+                    View all →
+                </a>
+
+            </div>
+
+
+            <div class="product-grid">
+
+                @foreach (var product in group.Value)
+                {
+                    <partial name="_ProductCard"
+                             model="product" />
+                }
+
+            </div>
+
+        </section>
+    }
+}

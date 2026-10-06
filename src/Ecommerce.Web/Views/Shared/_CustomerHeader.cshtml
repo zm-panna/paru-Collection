@@ -1,0 +1,3 @@
+@inject Ecommerce.Infrastructure.BrandingService Branding
+@{ var brand = await Branding.GetAsync(); }
+<header class="shop-header container"><a class="brand" href="/">@if(!string.IsNullOrWhiteSpace(brand.LogoUrl)){<img src="@brand.LogoUrl" alt="@brand.CompanyName" class="brand-logo"/>}<span>@brand.CompanyName</span></a><form action="/products" method="get" class="search"><input id="product-search" list="search-suggestions" autocomplete="off" name="q" placeholder="Search products, brands or SKU…" aria-label="Search products"/><datalist id="search-suggestions"></datalist><button>Search</button></form><nav><a href="/customer/wishlist">Wishlist</a><partial name="_CartPartial"/><partial name="_LoginPartial"/></nav></header>

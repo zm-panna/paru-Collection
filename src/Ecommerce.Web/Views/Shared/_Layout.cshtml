@@ -1,0 +1,243 @@
+@inject Ecommerce.Infrastructure.BrandingService Branding
+
+@{
+    var brand = await Branding.GetAsync();
+
+    var isLoggedIn = User.Identity?.IsAuthenticated == true;
+
+    var isAdmin =
+        isLoggedIn &&
+        (User.IsInRole("ADMIN") || User.IsInRole("Admin") || User.IsInRole("SuperAdmin"));
+}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1" />
+
+    <title>
+        @ViewData["Title"] · @brand.CompanyName
+    </title>
+
+    <meta name="description"
+          content="@ViewData["Description"]" />
+
+    <meta name="keywords"
+          content="@ViewData["Keywords"]" />
+
+    @if (ViewData["Canonical"] is string canonical)
+    {
+        <link rel="canonical"
+              href="@canonical" />
+    }
+
+    <link rel="stylesheet"
+          href="~/lib/bootstrap.min.css" />
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
+
+    @if(brand.FaviconUrl!=""){<link rel="icon" href="@brand.FaviconUrl"/>}
+    <!-- Dynamic Company Theme -->
+    <style>
+            :root {
+                --green: @brand.PrimaryColor;
+                --accent: @brand.AccentColor;
+                --paper: @brand.BackgroundColor;
+            }
+
+            .admin-panel-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 14px;
+                margin-left: 8px;
+                border-radius: 6px;
+                background: var(--green);
+                color: white !important;
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+                .admin-panel-link:hover {
+                    opacity: .90;
+                    color: white;
+                }
+
+            .admin-quickbar {
+                padding: 8px 0;
+                border-bottom: 1px solid rgba(0,0,0,.08);
+                background: var(--paper);
+            }
+
+            .admin-quickbar-inner {
+                display: flex;
+                justify-content: flex-end;
+                align-items: center;
+                gap: 10px;
+            }
+    </style>
+
+</head>
+
+<body>
+@if(brand.BackgroundImageUrl!=""){<img class="company-background" src="@brand.BackgroundImageUrl" alt=""/>}
+
+    <!-- ==========================================
+         ANNOUNCEMENT BAR
+         ========================================== -->
+
+    <div class="announcement">
+
+        Thoughtful essentials. Everyday value.
+
+        <span>
+            Delivery across Bangladesh
+        </span>
+
+    </div>
+
+
+    <!-- ==========================================
+         CUSTOMER HEADER
+         ========================================== -->
+
+    <partial name="_CustomerHeader" />
+
+
+    <!-- ==========================================
+         ADMIN QUICK ACCESS
+         Only Admin / SuperAdmin can see this
+         ========================================== -->
+    @if (isAdmin)
+    {
+        <div class="admin-quickbar">
+
+            <div class="container admin-quickbar-inner">
+
+                <span>
+                    <i class="bi bi-person-check"></i>
+                    Admin Mode
+                </span>
+
+                <a href="/admin"
+                   class="admin-panel-link">
+
+                    <i class="bi bi-speedometer2"></i>
+
+                    Admin Panel
+
+                </a>
+
+            </div>
+
+        </div>
+    }
+
+
+    <!-- ==========================================
+         MAIN PAGE
+         ========================================== -->
+
+    <main class="container page">
+
+        @if (TempData["Message"] is { } message)
+        {
+            <div class="notice">
+                @message
+            </div>
+        }
+
+        @if (TempData["Success"] is { } success)
+        {
+            <div class="alert alert-success">
+                @success
+            </div>
+        }
+
+        @if (TempData["Error"] is { } error)
+        {
+            <div class="alert alert-danger">
+                @error
+            </div>
+        }
+
+        @if(brand.BannerUrl!="" && Context.Request.Path=="/"){<img class="company-banner" src="@brand.BannerUrl" alt="@brand.CompanyName"/>}
+        @RenderBody()
+
+    </main>
+
+
+    <!-- ==========================================
+         FOOTER
+         ========================================== -->
+
+    <footer class="container">
+
+        <strong>
+            @brand.CompanyName
+        </strong>
+
+        <p>
+            @brand.Address · @brand.Phone · @brand.Email
+        </p>
+
+        <nav>
+
+            <a href="/about">
+                About &amp; contact
+            </a>
+
+            <a href="/customer/support">
+                Customer support
+            </a>
+
+            @if (!isLoggedIn)
+            {
+                <a href="/account/login?admin=true">
+                    Staff login
+                </a>
+            }
+
+            @if (isAdmin)
+            {
+                <a href="/admin">
+                    Admin Panel
+                </a>
+            }
+
+        </nav>
+
+        <small>
+            Prices in BDT. Taxes and shipping calculated at checkout.
+        </small>
+
+    </footer>
+
+
+    <!-- ==========================================
+         JAVASCRIPT
+         ========================================== -->
+
+    <partial name="_ContactWidget"/>
+    <partial name="_AiChatWidget"/>
+    <script src="~/js/site.js"
+            asp-append-version="true">
+    </script>
+
+    @await RenderSectionAsync(
+        "Scripts",
+        required: false)
+
+</body>
+
+</html>

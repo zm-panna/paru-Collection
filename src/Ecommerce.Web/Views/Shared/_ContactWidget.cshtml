@@ -1,0 +1,10 @@
+@inject Ecommerce.Infrastructure.BrandingService Branding
+@{ var contactBrand=await Branding.GetAsync(); var text="Hello "+contactBrand.CompanyName+", I need help with "+Context.Request.Path; }
+<nav class="contact-widget" aria-label="Contact the shop">
+@if(contactBrand.WhatsAppNumber!="") {
+<a class="contact-whatsapp" href="https://wa.me/@(contactBrand.WhatsAppNumber)?text=@(Uri.EscapeDataString(text))" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" title="WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2m0 2a8 8 0 1 1-4 14.9l-.4-.2-2.7.7.7-2.6-.3-.5A8 8 0 0 1 12 4m-3 3c-.7 0-1.5 1-1.5 2.2 0 2.5 3.5 6 6.2 6.5 1.2.2 2.3-.5 2.5-1.3l.1-.9-2.1-1-1 1c-1.4-.5-2.5-1.6-3-2.8l.7-1L10 7z"/></svg></a>
+}
+@if(contactBrand.MessengerUrl!="") {
+<a class="contact-messenger" href="@contactBrand.MessengerUrl" target="_blank" rel="noopener noreferrer" aria-label="Messenger" title="Messenger"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.4 5.4 3.6 7.1V22l3.4-1.9c1 .3 2 .4 3 .4 5.5 0 10-4.1 10-9.3S17.5 2 12 2M6 14l5-5 3 3 4-3-5 5-3-3z"/></svg></a>
+}
+</nav>

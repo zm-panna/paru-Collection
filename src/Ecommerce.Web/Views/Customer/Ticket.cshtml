@@ -1,0 +1,2 @@
+@model SupportTicket
+<h1>@Model.Subject</h1><p>@Model.Status · @Model.Message</p>@foreach(SupportReply r in ViewBag.Replies){<div class="panel"><strong>@(r.Staff?"Support":"You") · @r.CreatedAt.ToString("g")</strong><p>@r.Message</p></div>}<form method="post" action="/customer/reply">@Html.AntiForgeryToken()<input name="id" type="hidden" value="@Model.Id"/><textarea name="message" required maxlength="2000"></textarea><button>Reply</button></form>

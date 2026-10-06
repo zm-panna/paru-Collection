@@ -1,0 +1,164 @@
+﻿@model Product
+
+@{
+    // =========================================================
+    // PRODUCT IMAGE
+    // =========================================================
+
+    var primaryFile = Model.Files?
+        .Where(x =>
+            !string.IsNullOrWhiteSpace(x.FilePath) &&
+            !string.Equals(
+                x.FileType,
+                "application/pdf",
+                StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(x => x.IsPrimary)
+        .ThenBy(x => x.SortOrder)
+        .FirstOrDefault();
+
+    var imagePath = primaryFile?.FilePath;
+
+    if (string.IsNullOrWhiteSpace(imagePath))
+    {
+        imagePath = "/images/fallback.svg";
+    }
+    else
+    {
+        // Convert Windows path to browser path
+        imagePath = imagePath.Replace("\\", "/");
+
+        if (!imagePath.StartsWith("/"))
+        {
+            imagePath = "/" + imagePath;
+        }
+    }
+
+    // =========================================================
+    // PRODUCT SKU / PRICE
+    // =========================================================
+
+    var sku = Model.Skus?
+        .Where(x => x.Active)
+        .OrderBy(x => x.SalePrice)
+        .FirstOrDefault();
+
+    decimal salePrice = 0m;
+    decimal regularPrice = 0m;
+
+    if (sku != null)
+    {
+        salePrice = sku.SalePrice;
+        regularPrice = sku.RegularPrice;
+    }
+
+    var hasDiscount =
+        sku != null &&
+        regularPrice > 0m &&
+        salePrice >= 0m &&
+        regularPrice > salePrice;
+
+    decimal discountPercent = 0m;
+
+    if (hasDiscount)
+    {
+        discountPercent = Math.Round(
+            ((regularPrice - salePrice) /
+             regularPrice) * 100m,
+            0);
+    }
+
+    // =========================================================
+    // PRODUCT URL
+    // =========================================================
+
+    var productUrl =
+        "/product/" +
+        Uri.EscapeDataString(Model.Slug ?? string.Empty);
+}
+
+
+<article class="pc-product-card h-100">
+
+    @* ================= PRODUCT IMAGE ================= *@
+
+    <a href="@productUrl"
+       class="pc-product-image">
+
+        <img src="@imagePath"
+             alt="@Model.Name"
+             loading="lazy"
+             onerror="this.onerror=null;this.src='/images/fallback.svg';" />
+
+        @if (hasDiscount)
+        {
+            <span class="pc-discount">
+                -@discountPercent.ToString("N0")%
+            </span>
+        }
+
+        @if (Model.NewArrival)
+        {
+            <span class="pc-new">
+                NEW
+            </span>
+        }
+
+    </a>
+
+
+    @* ================= PRODUCT BODY ================= *@
+
+    <div class="pc-product-body">
+
+        <h3 class="pc-product-name">
+
+            <a href="@productUrl">
+                @Model.Name
+            </a>
+
+        </h3>
+
+
+        @* ================= PRICE ================= *@
+
+        @if (sku != null)
+        {
+            <div class="pc-price">
+
+                <span class="pc-sale-price">
+                    BDT @salePrice.ToString("N2")
+                </span>
+
+                @if (hasDiscount)
+                {
+                    <del class="pc-regular-price">
+                        BDT @regularPrice.ToString("N2")
+                    </del>
+                }
+
+            </div>
+        }
+        else
+        {
+            <div class="pc-price">
+
+                <span class="text-muted">
+                    Currently unavailable
+                </span>
+
+            </div>
+        }
+
+
+        @* ================= VIEW BUTTON ================= *@
+
+        <a href="@productUrl"
+           class="pc-view-button">
+
+            View product
+
+        </a>
+
+    </div>
+
+</article>

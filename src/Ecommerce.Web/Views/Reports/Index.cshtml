@@ -1,0 +1,2 @@
+@{Layout="_AdminLayout";}
+<h1>Reports</h1><p>Live data, date filters, CSV, Excel and browser Print / Save PDF.</p><div class="report-grid">@foreach(string r in ViewBag.Reports){<a class="panel" href="/admin/reports/@r">@r →</a>}</div>

@@ -1,0 +1,9 @@
+using Ecommerce.Application;
+using Microsoft.Playwright;
+using System.Text;
+using ZXing;
+namespace Ecommerce.Web;
+public static class ProductMedia {
+ public static string Barcode(string value){if(string.IsNullOrWhiteSpace(value)||value.Length>60||value.Any(c=>c<32||c>126))throw new BusinessException("Barcode requires 1–60 printable ASCII characters.");var matrix=new MultiFormatWriter().encode(value,BarcodeFormat.CODE_128,600,100);var svg=new StringBuilder($"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {matrix.Width} {matrix.Height}' role='img'><rect width='100%' height='100%' fill='white'/>");for(var x=0;x<matrix.Width;x++)if(matrix[x,0])svg.Append($"<rect x='{x}' y='0' width='1' height='{matrix.Height}' fill='black'/>");return svg.Append("</svg>").ToString();}
+ public static async Task<byte[]> ThumbnailAsync(byte[] bytes,string mime){try{using var pw=await Playwright.CreateAsync();await using var browser=await pw.Chromium.LaunchAsync(new(){Headless=true});var page=await browser.NewPageAsync(new(){ViewportSize=new(){Width=320,Height=320},DeviceScaleFactor=1});await page.RouteAsync("**/*",route=>route.AbortAsync());await page.SetContentAsync("<html><body style='margin:0;background:white'><img style='width:320px;height:320px;object-fit:contain' src='data:"+mime+";base64,"+Convert.ToBase64String(bytes)+"'></body></html>");var valid=await page.EvaluateAsync<bool>("async()=>{const i=document.querySelector('img');await i.decode();return i.naturalWidth>0&&i.naturalHeight>0&&i.naturalWidth*i.naturalHeight<=40000000;}");if(!valid)throw new BusinessException("Image exceeds 40 megapixels.");return await page.ScreenshotAsync(new(){Type=ScreenshotType.Png});}catch(PlaywrightException){throw new BusinessException("Image processing failed. Install Chromium with scripts/install-pdf.ps1 and use a valid image.");}}
+}

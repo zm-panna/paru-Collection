@@ -1,0 +1,6 @@
+@inject Ecommerce.Infrastructure.BrandingService Branding
+@{var aiBrand=await Branding.GetAsync();}
+@if (User.Identity?.IsAuthenticated == true)
+{
+<div class="ai-widget" id="ai-widget"><button type="button" class="ai-widget-toggle" id="ai-widget-toggle" aria-expanded="false"><i class="bi bi-stars"></i> AI Assistant</button><section class="ai-widget-panel" id="ai-widget-panel" hidden><header><strong>@aiBrand.CompanyName AI Assistant</strong><button type="button" id="ai-widget-close" aria-label="Close">×</button></header><div class="ai-widget-messages" id="ai-widget-messages" aria-live="polite"><div class="ai-msg ai-msg-bot">আসসালামু আলাইকুম। Product, stock, price বা আপনার order সম্পর্কে জিজ্ঞাসা করুন।</div></div><form id="ai-widget-form" action="/assistant/ask" method="post">@Html.AntiForgeryToken()<div class="ai-widget-input"><input name="question" maxlength="2000" required autocomplete="off" placeholder="আপনার প্রশ্ন লিখুন..."/><button type="submit"><i class="bi bi-send"></i></button></div></form><small>AI ভুল করতে পারে—চূড়ান্ত price/order সংশ্লিষ্ট page-এ যাচাই করুন।</small></section></div>
+}

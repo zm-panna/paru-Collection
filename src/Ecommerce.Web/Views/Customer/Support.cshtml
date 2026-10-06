@@ -1,0 +1,2 @@
+@model List<SupportTicket>
+<h1>Customer support</h1><div class="two-col"><form method="post" class="panel">@Html.AntiForgeryToken()<label>Subject</label><input name="subject" maxlength="160" required/><label>Message</label><textarea name="message" maxlength="2000" required></textarea><button>Open ticket</button></form><section>@foreach(var t in Model){<article class="panel"><a href="/customer/ticket/@t.Id"><strong>@t.Subject</strong></a><span class="status">@t.Status</span><p>@t.Message</p><p>@t.Response</p></article>}</section></div>

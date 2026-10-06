@@ -1,0 +1,3 @@
+@model ContentPage
+@{ViewData["Title"]=Model.Name;ViewData["Description"]=Model.MetaDescription;}
+<h1>@Model.Name</h1><article style="white-space:pre-wrap">@Model.Body</article>
